@@ -80,12 +80,20 @@ const Register = () => {
       setIsSubmitting(true);
       
       try {
+        console.log('Données du formulaire envoyées:', {
+          username: formData.username,
+          email: formData.email,
+          password: formData.password,
+          password2: formData.password2,
+          bio: formData.bio || ''
+        });
+        
         await register({
           username: formData.username,
           email: formData.email,
           password: formData.password,
           password2: formData.password2,
-          bio: formData.bio
+          bio: formData.bio || ''
         });
         
         setSuccessMessage('Registration successful! You can now log in.');
