@@ -9,7 +9,7 @@ const Home = () => {
     <div className="max-w-4xl mx-auto">
       <div className="text-center py-10">
         <h1 className="text-4xl md:text-5xl font-bold mb-6 text-primary-800">
-          Welcome to Yves Programmeur Quiz App
+          Welcome to my Quiz App
         </h1>
         <p className="text-xl text-gray-600 mb-8">
           Test your knowledge with interactive quizzes and get AI-powered explanations
