@@ -22,6 +22,7 @@ DEBUG = os.environ.get('DEBUG', 'True') == 'True'
 
 ALLOWED_HOSTS = ['*']
 CORS_ALLOW_ALL_ORIGINS = True
+CORS_ALLOW_CREDENTIALS = True
 
 # Application definition
 INSTALLED_APPS = [
@@ -133,6 +134,9 @@ SIMPLE_JWT = {
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",
     "http://127.0.0.1:3000",
+    "https://yves-programmeur-quiz.vercel.app",
+    "https://yves-programmeur-quiz-git-main.vercel.app",
+    "https://yves-programmeur-quiz-yvesprogrammeur.vercel.app"
 ]
 
 if not DEBUG:
