@@ -134,9 +134,8 @@ SIMPLE_JWT = {
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",
     "http://127.0.0.1:3000",
-    "https://yves-programmeur-quiz.vercel.app",
-    "https://yves-programmeur-quiz-git-main.vercel.app",
-    "https://yves-programmeur-quiz-yvesprogrammeur.vercel.app"
+    "https://quizzapp-seven.vercel.app/"
+
 ]
 
 if not DEBUG:
