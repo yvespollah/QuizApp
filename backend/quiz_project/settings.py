@@ -77,7 +77,7 @@ WSGI_APPLICATION = 'quiz_project.wsgi.application'
 # Database
 DATABASES = {
     'default': dj_database_url.config(
-        default=f'sqlite:///{BASE_DIR / "db.sqlite3"}',
+        default='postgresql://postgres:postgres@localhost:5432/quiz_db',
         conn_max_age=600
     )
 }
@@ -134,7 +134,7 @@ SIMPLE_JWT = {
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",
     "http://127.0.0.1:3000",
-    "https://quizzapp-seven.vercel.app/"
+    "https://quizzapp-seven.vercel.app"
 
 ]
 
