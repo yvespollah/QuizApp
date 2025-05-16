@@ -53,10 +53,34 @@ export const AuthProvider = ({ children }) => {
   // Register user
   const register = async (userData) => {
     try {
-      const res = await axios.post('/users/register/', userData);
+      console.log('Tentative d\'inscription avec:', userData);
+      const res = await axios.post('/users/register/', {
+        username: userData.username,
+        email: userData.email,
+        password: userData.password,
+        password2: userData.password2,
+        bio: userData.bio || ''
+      });
+      console.log('Réponse d\'inscription:', res.data);
       return res.data;
     } catch (err) {
-      setError(err.response?.data?.detail || 'Registration failed');
+      console.error('Erreur d\'inscription:', err.response?.data || err.message);
+      
+      // Gérer les erreurs de validation
+      if (err.response?.data) {
+        const errorData = err.response.data;
+        let errorMessage = '';
+        
+        // Convertir les erreurs de validation en message lisible
+        Object.keys(errorData).forEach(key => {
+          errorMessage += `${key}: ${errorData[key].join(', ')}\n`;
+        });
+        
+        setError(errorMessage || 'L\'inscription a échoué');
+      } else {
+        setError('L\'inscription a échoué. Veuillez réessayer.');
+      }
+      
       throw err;
     }
   };
@@ -64,7 +88,13 @@ export const AuthProvider = ({ children }) => {
   // Login user
   const login = async (userData) => {
     try {
-      const res = await axios.post('/token/', userData);
+      console.log('Tentative de connexion avec:', userData);
+      const res = await axios.post('/token/', {
+        email: userData.email,
+        password: userData.password
+      });
+      
+      console.log('Réponse de connexion:', res.data);
       
       // Save token to local storage
       localStorage.setItem('token', res.data.access);
@@ -74,13 +104,15 @@ export const AuthProvider = ({ children }) => {
       
       // Get user data
       const userRes = await axios.get('/users/profile/');
+      console.log('Données utilisateur:', userRes.data);
       setUser(userRes.data);
       setIsAuthenticated(true);
       setError(null);
       
       return res.data;
     } catch (err) {
-      setError(err.response?.data?.detail || 'Login failed');
+      console.error('Erreur de connexion:', err.response?.data || err.message);
+      setError(err.response?.data?.detail || 'Échec de connexion. Vérifiez vos identifiants.');
       throw err;
     }
   };

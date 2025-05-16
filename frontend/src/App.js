@@ -21,9 +21,12 @@ import QuizHistory from './pages/QuizHistory';
 import { AuthProvider } from './context/AuthContext';
 
 // Set up axios defaults
-const API_URL = 'https://quizapp-xqwn.onrender.com/api';
+const API_URL = process.env.NODE_ENV === 'production' 
+  ? 'https://quizapp-xqwn.onrender.com/api'
+  : 'http://localhost:8000/api';
 axios.defaults.baseURL = API_URL;
 axios.defaults.headers.post['Content-Type'] = 'application/json';
+console.log('API URL:', API_URL);
 
 function App() {
   return (
