@@ -20,9 +20,20 @@ SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-qp7^y@!zn6=9f3$yx_8z$
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.environ.get('DEBUG', 'True') == 'True'
 
-ALLOWED_HOSTS = ['*']
-CORS_ALLOW_ALL_ORIGINS = True
+ALLOWED_HOSTS = ['*', 'quizapp-xqwn.onrender.com', 'yves-programmeur-quiz.vercel.app', 'quizzapp-seven.vercel.app']
+
+# Sécurité pour la production
+if not DEBUG:
+    SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+    SECURE_SSL_REDIRECT = True
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+
+# Paramètres CORS
+CORS_ORIGIN_ALLOW_ALL = True  # Version correcte du paramètre
 CORS_ALLOW_CREDENTIALS = True
+CORS_EXPOSE_HEADERS = ['Content-Type', 'X-CSRFToken', 'Authorization']
+CORS_PREFLIGHT_MAX_AGE = 86400  # 24 heures en secondes
 
 # Application definition
 INSTALLED_APPS = [
@@ -131,11 +142,34 @@ SIMPLE_JWT = {
 }
 
 # CORS settings
+CORS_ALLOW_ALL_ORIGINS = True  # Permettre les requêtes de tous les domaines
+CORS_ALLOW_CREDENTIALS = True
+CORS_ALLOW_METHODS = [
+    'DELETE',
+    'GET',
+    'OPTIONS',
+    'PATCH',
+    'POST',
+    'PUT',
+]
+CORS_ALLOW_HEADERS = [
+    'accept',
+    'accept-encoding',
+    'authorization',
+    'content-type',
+    'dnt',
+    'origin',
+    'user-agent',
+    'x-csrftoken',
+    'x-requested-with',
+]
+
+# Liste des origines spécifiques (en plus de CORS_ALLOW_ALL_ORIGINS)
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",
     "http://127.0.0.1:3000",
-    "https://quizzapp-seven.vercel.app"
-
+    "https://quizzapp-seven.vercel.app",
+    "https://yves-programmeur-quiz.vercel.app"
 ]
 
 if not DEBUG:

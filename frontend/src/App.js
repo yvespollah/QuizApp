@@ -22,11 +22,21 @@ import { AuthProvider } from './context/AuthContext';
 
 // Set up axios defaults
 const API_URL = process.env.NODE_ENV === 'production' 
-  ? 'https://quizapp-xqwn.onrender.com/api'
+  ? 'https://quizapp-xqwn.onrender.com/api'  // URL directe de Render en production
   : 'http://localhost:8000/api';
 axios.defaults.baseURL = API_URL;
 axios.defaults.headers.post['Content-Type'] = 'application/json';
+axios.defaults.withCredentials = true;  // Important pour les cookies d'authentification
 console.log('API URL:', API_URL);
+
+// Ajouter un intercepteur pour les erreurs
+axios.interceptors.response.use(
+  response => response,
+  error => {
+    console.error('Erreur API:', error.response?.data || error.message);
+    return Promise.reject(error);
+  }
+);
 
 function App() {
   return (
