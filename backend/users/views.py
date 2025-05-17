@@ -35,10 +35,17 @@ class RegisterView(generics.CreateAPIView):
             # Log du succès
             logger.info(f"Utilisateur créé avec succès: {serializer.data['username']}")
             
-            # Renvoyer la réponse
+            # Renvoyer la réponse avec un message clair
             headers = self.get_success_headers(serializer.data)
             return Response(
-                {"detail": "Inscription réussie!", "user": serializer.data},
+                {
+                    "detail": "Inscription réussie! Vous pouvez maintenant vous connecter.",
+                    "success": True,
+                    "user": {
+                        "username": serializer.data['username'],
+                        "email": serializer.data['email']
+                    }
+                },
                 status=status.HTTP_201_CREATED,
                 headers=headers
             )
@@ -48,7 +55,11 @@ class RegisterView(generics.CreateAPIView):
             
             # Renvoyer une réponse d'erreur détaillée
             return Response(
-                {"detail": f"Erreur d'inscription: {str(e)}", "error_type": type(e).__name__},
+                {
+                    "detail": f"Erreur d'inscription: {str(e)}",
+                    "success": False,
+                    "error_type": type(e).__name__
+                },
                 status=status.HTTP_400_BAD_REQUEST
             )
 
