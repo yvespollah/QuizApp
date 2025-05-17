@@ -20,13 +20,24 @@ import QuizHistory from './pages/QuizHistory';
 // Context
 import { AuthProvider } from './context/AuthContext';
 
-// Set up axios defaults
+// Set up axios defaults - Version optimisée pour la production
 const API_URL = process.env.NODE_ENV === 'production' 
-  ? 'https://quizapp-xqwn.onrender.com/api'  // URL directe de Render en production
+  ? 'https://quizapp-xqwn.onrender.com/api'  // URL directe du backend
   : 'http://localhost:8000/api';
+
+// Configuration d'axios
 axios.defaults.baseURL = API_URL;
-axios.defaults.headers.post['Content-Type'] = 'application/json';
-axios.defaults.withCredentials = true;  // Important pour les cookies d'authentification
+axios.defaults.headers.common['Content-Type'] = 'application/json';
+axios.defaults.headers.common['Accept'] = 'application/json';
+
+// Désactiver withCredentials pour éviter les problèmes CORS en production
+axios.defaults.withCredentials = false;
+
+// Ajouter des en-têtes CORS pour la production
+if (process.env.NODE_ENV === 'production') {
+  axios.defaults.headers.common['Access-Control-Allow-Origin'] = '*';
+}
+
 console.log('API URL:', API_URL);
 
 // Ajouter un intercepteur pour les erreurs

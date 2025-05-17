@@ -1,5 +1,6 @@
 import React, { createContext, useState, useEffect } from 'react';
 import axios from 'axios';
+import Notification from '../components/Notification';
 
 // Create context
 const AuthContext = createContext();
@@ -8,6 +9,7 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [notification, setNotification] = useState({ message: null, type: null });
   const [error, setError] = useState(null);
 
   // Check if user is logged in on initial load
@@ -17,25 +19,39 @@ export const AuthProvider = ({ children }) => {
       const token = localStorage.getItem('token');
       
       if (token) {
-        // Set auth token header
-        setAuthToken(token);
+        // Load user data - Version optimisée pour la production
+        const loadUser = async () => {
+          if (localStorage.token) {
+            setAuthToken(localStorage.token);
+          } else {
+            setLoading(false);
+            return; // Pas de token, pas besoin de charger l'utilisateur
+          }
+          
+          try {
+            // Utiliser le chemin complet pour l'API en production
+            const endpoint = process.env.NODE_ENV === 'production' 
+              ? '/api/users/profile/' 
+              : '/users/profile/';
+            
+            const res = await axios.get(endpoint);
+            setUser(res.data);
+            setIsAuthenticated(true);
+            setLoading(false);
+          } catch (err) {
+            console.error('Erreur de chargement utilisateur:', err);
+            localStorage.removeItem('token'); // Supprimer le token invalide
+            setAuthToken(null);
+            setUser(null);
+            setIsAuthenticated(false);
+            setLoading(false);
+          }
+        };
         
-        try {
-          // Verify token by getting user data
-          const res = await axios.get('/users/profile/');
-          setUser(res.data);
-          setIsAuthenticated(true);
-        } catch (err) {
-          // Token is invalid
-          localStorage.removeItem('token');
-          setAuthToken(null);
-          setUser(null);
-          setIsAuthenticated(false);
-          setError('Session expired. Please log in again.');
-        }
+        loadUser();
+      } else {
+        setLoading(false);
       }
-      
-      setLoading(false);
     };
     
     checkLoggedIn();
@@ -50,96 +66,90 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  // Register user
+  // Register user - Version optimisée pour la production
   const register = async (userData) => {
     try {
-      // Afficher l'URL complète pour le débogage
-      const registerUrl = `${axios.defaults.baseURL}/users/register/`;
-      console.log('URL d\'inscription:', registerUrl);
       console.log('Tentative d\'inscription avec:', userData);
+      setError(null);
+      setNotification({ message: null, type: null });
       
-      // Ajouter des en-têtes supplémentaires pour le débogage
-      const config = {
-        headers: {
-          'Content-Type': 'application/json',
-          'X-Debug-Info': 'frontend-registration'
-        },
-        withCredentials: true
-      };
+      // Utiliser le chemin complet pour l'API en production
+      const endpoint = process.env.NODE_ENV === 'production' 
+        ? '/api/users/register/' 
+        : '/users/register/';
       
-      // Faire la requête avec les en-têtes personnalisés
-      const res = await axios.post('/users/register/', {
+      const res = await axios.post(endpoint, {
         username: userData.username,
         email: userData.email,
         password: userData.password,
         password2: userData.password2,
         bio: userData.bio || ''
-      }, config);
+      });
       
       console.log('Réponse d\'inscription:', res.data);
-      alert('Inscription réussie! Vous pouvez maintenant vous connecter.');
+      
+      // Afficher une notification de succès
+      setNotification({
+        message: 'Inscription réussie! Vous allez être redirigé vers la page de connexion.',
+        type: 'success'
+      });
+      
+      // Rediriger vers la page de connexion après 2 secondes
+      setTimeout(() => {
+        window.location.href = '/login';
+      }, 2000);
+      
       return res.data;
     } catch (err) {
-      // Afficher des informations détaillées sur l'erreur
       console.error('Erreur d\'inscription complète:', err);
-      console.error('Détails de la réponse:', err.response);
-      console.error('Données d\'erreur:', err.response?.data);
-      console.error('Statut HTTP:', err.response?.status);
-      console.error('En-têtes:', err.response?.headers);
       
-      // Gérer les erreurs de validation
-      if (err.response?.data) {
-        const errorData = err.response.data;
-        let errorMessage = 'Erreurs d\'inscription:\n';
-        
-        // Convertir les erreurs de validation en message lisible
-        if (typeof errorData === 'object') {
-          Object.keys(errorData).forEach(key => {
-            const value = errorData[key];
-            if (Array.isArray(value)) {
-              errorMessage += `${key}: ${value.join(', ')}\n`;
-            } else {
-              errorMessage += `${key}: ${value}\n`;
-            }
-          });
-        } else if (typeof errorData === 'string') {
-          errorMessage = errorData;
+      let message = 'L\'inscription a échoué. Vérifiez votre connexion internet.';
+      
+      if (err.response) {
+        console.log('Données d\'erreur:', err.response.data);
+        if (typeof err.response.data === 'object') {
+          // Simplifier le message d'erreur
+          message = Object.keys(err.response.data)
+            .map(key => {
+              const value = err.response.data[key];
+              return `${key}: ${Array.isArray(value) ? value.join(', ') : value}`;
+            })
+            .join(', ');
+        } else if (typeof err.response.data === 'string') {
+          message = err.response.data;
         }
-        
-        setError(errorMessage);
-        alert(errorMessage); // Afficher l'erreur dans une alerte pour débogage
+      } else if (err.request) {
+        // La requête a été faite mais pas de réponse
+        message = 'Erreur réseau: Impossible de contacter le serveur';
       } else {
-        const errorMsg = `L'inscription a échoué: ${err.message || 'Erreur inconnue'}`;
-        setError(errorMsg);
-        alert(errorMsg); // Afficher l'erreur dans une alerte pour débogage
+        // Erreur lors de la configuration de la requête
+        message = err.message || 'Erreur inconnue';
       }
       
-      throw err;
+      setError(message);
+      setNotification({
+        message: message,
+        type: 'error'
+      });
     }
   };
 
-  // Login user
+  // Login user - Version optimisée pour la production
   const login = async (userData) => {
     try {
-      // Afficher l'URL complète pour le débogage
-      const loginUrl = `${axios.defaults.baseURL}/token/`;
-      console.log('URL de connexion:', loginUrl);
       console.log('Tentative de connexion avec:', userData);
+      setError(null);
+      setNotification({ message: null, type: null });
       
-      // Ajouter des en-têtes supplémentaires pour le débogage
-      const config = {
-        headers: {
-          'Content-Type': 'application/json',
-          'X-Debug-Info': 'frontend-login'
-        },
-        withCredentials: true
-      };
+      // Utiliser le chemin complet pour l'API en production
+      const endpoint = process.env.NODE_ENV === 'production' 
+        ? '/api/token/' 
+        : '/token/';
       
-      // Faire la requête avec les en-têtes personnalisés
-      const res = await axios.post('/token/', {
+      const res = await axios.post(endpoint, {
         email: userData.email,
         password: userData.password
-      }, config);
+      });
       
       console.log('Réponse de connexion:', res.data);
       
@@ -150,56 +160,80 @@ export const AuthProvider = ({ children }) => {
       setAuthToken(res.data.access);
       
       // Get user data
-      const userRes = await axios.get('/users/profile/', {
-        headers: {
-          'Authorization': `Bearer ${res.data.access}`,
-          'X-Debug-Info': 'frontend-profile'
-        },
-        withCredentials: true
-      });
-      
-      console.log('Données utilisateur:', userRes.data);
-      setUser(userRes.data);
-      setIsAuthenticated(true);
-      setError(null);
+      try {
+        // Utiliser le chemin complet pour l'API en production
+        const profileEndpoint = process.env.NODE_ENV === 'production' 
+          ? '/api/users/profile/' 
+          : '/users/profile/';
+        
+        const userRes = await axios.get(profileEndpoint);
+        console.log('Données utilisateur:', userRes.data);
+        setUser(userRes.data);
+        setIsAuthenticated(true);
+        setError(null);
+        
+        // Afficher une notification de succès
+        setNotification({
+          message: `Connexion réussie! Bienvenue, ${userRes.data.username}.`,
+          type: 'success'
+        });
+        
+        // Rediriger vers la page d'accueil après 2 secondes
+        setTimeout(() => {
+          window.location.href = '/';
+        }, 2000);
+      } catch (profileErr) {
+        console.error('Erreur profil:', profileErr);
+        setIsAuthenticated(true);
+        
+        // Afficher une notification de succès
+        setNotification({
+          message: 'Connexion réussie!',
+          type: 'success'
+        });
+        
+        // Rediriger vers la page d'accueil après 2 secondes
+        setTimeout(() => {
+          window.location.href = '/';
+        }, 2000);
+      }
       
       return res.data;
     } catch (err) {
-      // Afficher des informations détaillées sur l'erreur
       console.error('Erreur de connexion complète:', err);
-      console.error('Détails de la réponse:', err.response);
-      console.error('Données d\'erreur:', err.response?.data);
-      console.error('Statut HTTP:', err.response?.status);
-      console.error('En-têtes:', err.response?.headers);
       
-      // Construire un message d'erreur détaillé
-      let errorMessage = 'Échec de connexion: ';
+      let message = 'Échec de connexion. Vérifiez vos identifiants.';
       
-      if (err.response?.data) {
+      if (err.response) {
+        console.log('Données d\'erreur:', err.response.data);
         if (typeof err.response.data === 'object') {
           if (err.response.data.detail) {
-            errorMessage += err.response.data.detail;
+            message = err.response.data.detail;
           } else {
-            // Parcourir toutes les erreurs
-            Object.keys(err.response.data).forEach(key => {
-              const value = err.response.data[key];
-              if (Array.isArray(value)) {
-                errorMessage += `${key}: ${value.join(', ')}. `;
-              } else {
-                errorMessage += `${key}: ${value}. `;
-              }
-            });
+            // Simplifier le message d'erreur
+            message = Object.keys(err.response.data)
+              .map(key => {
+                const value = err.response.data[key];
+                return `${key}: ${Array.isArray(value) ? value.join(', ') : value}`;
+              })
+              .join(', ');
           }
         } else if (typeof err.response.data === 'string') {
-          errorMessage += err.response.data;
+          message = err.response.data;
         }
+      } else if (err.request) {
+        // La requête a été faite mais pas de réponse
+        message = 'Erreur réseau: Impossible de contacter le serveur';
       } else {
-        errorMessage += err.message || 'Erreur inconnue';
+        // Erreur lors de la configuration de la requête
+        message = err.message || 'Erreur inconnue';
       }
       
-      setError(errorMessage);
-      alert(errorMessage); // Afficher l'erreur dans une alerte pour débogage
-      throw err;
+      setError(message);
+      setNotification({
+        message: message,
+        type: 'error'
+      });
     }
   };
 
@@ -228,9 +262,10 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  // Clear errors
-  const clearError = () => {
+  // Clear errors and notifications
+  const clearNotifications = () => {
     setError(null);
+    setNotification({ message: null, type: null });
   };
 
   return (
@@ -240,11 +275,12 @@ export const AuthProvider = ({ children }) => {
         isAuthenticated,
         loading,
         error,
+        notification,
         register,
         login,
         logout,
         updateProfile,
-        clearError
+        clearNotifications
       }}
     >
       {children}

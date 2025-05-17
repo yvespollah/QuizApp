@@ -1,6 +1,7 @@
 import React, { useState, useContext, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import AuthContext from '../context/AuthContext';
+import Notification from '../components/Notification';
 
 const Register = () => {
   const [formData, setFormData] = useState({
@@ -14,7 +15,7 @@ const Register = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
   
-  const { register, isAuthenticated, error, clearError } = useContext(AuthContext);
+  const { register, isAuthenticated, error, notification, clearNotifications } = useContext(AuthContext);
   const navigate = useNavigate();
   
   // Redirect if already authenticated
@@ -23,9 +24,9 @@ const Register = () => {
       navigate('/quizzes');
     }
     
-    // Clear any previous errors
-    clearError();
-  }, [isAuthenticated, navigate, clearError]);
+    // Clear any previous errors and notifications
+    clearNotifications();
+  }, [isAuthenticated, navigate, clearNotifications]);
   
   const handleChange = (e) => {
     setFormData({
@@ -123,15 +124,13 @@ const Register = () => {
     <div className="max-w-md mx-auto">
       <h1 className="text-3xl font-bold text-center mb-8">Register</h1>
       
-      {error && (
+      {/* Afficher la notification */}
+      <Notification message={notification.message} type={notification.type} />
+      
+      {/* Message d'erreur du formulaire (validation côté client) */}
+      {error && !notification.message && (
         <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
           {error}
-        </div>
-      )}
-      
-      {successMessage && (
-        <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded mb-4">
-          {successMessage}
         </div>
       )}
       
