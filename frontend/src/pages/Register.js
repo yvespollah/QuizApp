@@ -60,7 +60,7 @@ const Register = () => {
     if (!formData.password) {
       errors.password = 'Password is required';
     } else if (formData.password.length < 8) {
-      errors.password = 'Password must be at least 8 characters';
+      errors.password = 'Password must be at least 8 characters(numbers and letters)';
     }
     
     if (!formData.password2) {
