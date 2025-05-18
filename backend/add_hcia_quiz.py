@@ -246,27 +246,70 @@ true_false_questions = [
     }
 ]
 
-# Ajouter toutes les questions
-all_questions = []
-all_questions.extend(single_choice_questions)
-all_questions.extend(multiple_choice_questions)
-all_questions.extend(true_false_questions)
-
-# Créer les questions et les choix
-for i, q_data in enumerate(all_questions, 1):
+# Ajout des questions au quiz
+for question_data in single_choice_questions:
+    # Création de la question à choix unique
     question = Question.objects.create(
         quiz=quiz,
-        text=q_data["text"],
-        order=i
+        text=question_data['text'],
+        explanation='',
+        is_multiple_choice=False
     )
     
-    for choice_data in q_data["choices"]:
+    print(f"Question ajoutée: {question.text}")
+    
+    # Ajout des choix
+    for choice_data in question_data['choices']:
         Choice.objects.create(
             question=question,
-            text=choice_data["text"],
-            is_correct=choice_data["is_correct"]
+            text=choice_data['text'],
+            is_correct=choice_data['is_correct']
         )
-    
-    print(f"Question {i} ajoutée avec {len(q_data['choices'])} choix")
+        
+        print(f"  - Choix ajouté: {choice_data['text']} (Correct: {choice_data['is_correct']})")
 
-print(f"Quiz HCIA Datacom ajouté avec succès avec {len(all_questions)} questions!")
+# Ajout des questions à choix multiples
+for question_data in multiple_choice_questions:
+    # Création de la question à choix multiples
+    question = Question.objects.create(
+        quiz=quiz,
+        text=question_data['text'],
+        explanation='',
+        is_multiple_choice=True
+    )
+    
+    print(f"Question ajoutée: {question.text}")
+    
+    # Ajout des choix
+    for choice_data in question_data['choices']:
+        Choice.objects.create(
+            question=question,
+            text=choice_data['text'],
+            is_correct=choice_data['is_correct']
+        )
+        
+        print(f"  - Choix ajouté: {choice_data['text']} (Correct: {choice_data['is_correct']})")
+
+# Ajout des questions vrai/faux
+for question_data in true_false_questions:
+    # Création de la question vrai/faux
+    question = Question.objects.create(
+        quiz=quiz,
+        text=question_data['text'],
+        explanation='',
+        is_multiple_choice=False
+    )
+    
+    print(f"Question ajoutée: {question.text}")
+    
+    # Ajout des choix
+    for choice_data in question_data['choices']:
+        Choice.objects.create(
+            question=question,
+            text=choice_data['text'],
+            is_correct=choice_data['is_correct']
+        )
+        
+        print(f"  - Choix ajouté: {choice_data['text']} (Correct: {choice_data['is_correct']})")
+
+print(f"\nQuiz HCIA Datacom créé avec succès avec {len(single_choice_questions)} questions à choix unique, {len(multiple_choice_questions)} questions à choix multiples, et {len(true_false_questions)} questions vrai/faux.")
