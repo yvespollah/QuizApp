@@ -90,31 +90,72 @@ class QuizAttemptViewSet(viewsets.ModelViewSet):
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         
         question_id = serializer.validated_data['question_id']
-        choice_id = serializer.validated_data['choice_id']
         
-        # Get the question and choice
+        # Get the question
         try:
             question = Question.objects.get(id=question_id, quiz=attempt.quiz)
-            choice = Choice.objects.get(id=choice_id, question=question)
-        except (Question.DoesNotExist, Choice.DoesNotExist):
+        except Question.DoesNotExist:
             return Response(
-                {"detail": "Invalid question or choice."},
+                {"detail": "Invalid question."},
                 status=status.HTTP_400_BAD_REQUEST
             )
         
         # Check if an answer already exists for this question
         existing_answer = Answer.objects.filter(attempt=attempt, question=question).first()
-        if existing_answer:
-            existing_answer.selected_choice = choice
-            existing_answer.save()
-            answer = existing_answer
+        
+        # Traitement différent selon le type de question
+        if question.is_multiple_choice:
+            # Question à choix multiples
+            choice_ids = serializer.validated_data.get('choice_ids', [])
+            
+            # Vérifier que tous les choix existent et appartiennent à la question
+            choices = []
+            for choice_id in choice_ids:
+                try:
+                    choice = Choice.objects.get(id=choice_id, question=question)
+                    choices.append(choice)
+                except Choice.DoesNotExist:
+                    return Response(
+                        {"detail": f"Invalid choice ID: {choice_id}."},
+                        status=status.HTTP_400_BAD_REQUEST
+                    )
+            
+            if existing_answer:
+                # Mettre à jour la réponse existante
+                existing_answer.selected_choices.clear()  # Supprimer les choix précédents
+                existing_answer.selected_choices.add(*choices)  # Ajouter les nouveaux choix
+                answer = existing_answer
+            else:
+                # Créer une nouvelle réponse
+                answer = Answer.objects.create(
+                    attempt=attempt,
+                    question=question
+                )
+                answer.selected_choices.set(choices)
         else:
-            # Create a new answer
-            answer = Answer.objects.create(
-                attempt=attempt,
-                question=question,
-                selected_choice=choice
-            )
+            # Question à choix unique
+            choice_id = serializer.validated_data.get('choice_id')
+            
+            try:
+                choice = Choice.objects.get(id=choice_id, question=question)
+            except Choice.DoesNotExist:
+                return Response(
+                    {"detail": "Invalid choice."},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            
+            if existing_answer:
+                # Mettre à jour la réponse existante
+                existing_answer.selected_choice = choice
+                existing_answer.save()
+                answer = existing_answer
+            else:
+                # Créer une nouvelle réponse
+                answer = Answer.objects.create(
+                    attempt=attempt,
+                    question=question,
+                    selected_choice=choice
+                )
         
         return Response(AnswerSerializer(answer).data)
     

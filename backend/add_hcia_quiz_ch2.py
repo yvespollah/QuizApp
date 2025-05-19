@@ -246,11 +246,23 @@ true_false_questions = [
     }
 ]
 
-# Ajouter toutes les questions
+# Création des listes pour chaque type de question
 all_questions = []
-all_questions.extend(single_choice_questions)
-all_questions.extend(multiple_choice_questions)
-all_questions.extend(true_false_questions)
+
+# Ajouter les questions à choix unique avec le flag is_multiple_choice=False
+for q in single_choice_questions:
+    q["is_multiple_choice"] = False
+    all_questions.append(q)
+
+# Ajouter les questions à choix multiples avec le flag is_multiple_choice=True
+for q in multiple_choice_questions:
+    q["is_multiple_choice"] = True
+    all_questions.append(q)
+
+# Ajouter les questions vrai/faux avec le flag is_multiple_choice=False
+for q in true_false_questions:
+    q["is_multiple_choice"] = False
+    all_questions.append(q)
 
 # Créer les questions et les choix
 for i, q_data in enumerate(all_questions, 1):
@@ -258,9 +270,11 @@ for i, q_data in enumerate(all_questions, 1):
         quiz=quiz,
         text=q_data["text"],
         explanation="",  # Pas d'explication
-        order=i
+        order=i,
+        is_multiple_choice=q_data["is_multiple_choice"]
     )
     
+    # Ajout des choix
     for choice_data in q_data["choices"]:
         Choice.objects.create(
             question=question,
@@ -268,6 +282,7 @@ for i, q_data in enumerate(all_questions, 1):
             is_correct=choice_data["is_correct"]
         )
     
-    print(f"Question {i} ajoutée avec {len(q_data['choices'])} choix")
+    question_type = "choix multiples" if q_data["is_multiple_choice"] else "choix unique"
+    print(f"Question {i} ajoutée ({question_type}) avec {len(q_data['choices'])} choix")
 
 print(f"\nQuiz HCIA Datacom Chapter 2 créé avec succès avec {len(single_choice_questions)} questions à choix unique, {len(multiple_choice_questions)} questions à choix multiples, et {len(true_false_questions)} questions vrai/faux.")

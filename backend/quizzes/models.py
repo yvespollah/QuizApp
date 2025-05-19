@@ -34,6 +34,7 @@ class Question(models.Model):
     text = models.TextField()
     explanation = models.TextField(blank=True, help_text="Manual explanation for this question")
     order = models.IntegerField(default=0)
+    is_multiple_choice = models.BooleanField(default=False, help_text="Whether multiple answers can be selected")
     
     class Meta:
         ordering = ['order']
@@ -72,7 +73,8 @@ class Answer(models.Model):
     """Model representing a user's answer to a question"""
     attempt = models.ForeignKey(QuizAttempt, on_delete=models.CASCADE, related_name='answers')
     question = models.ForeignKey(Question, on_delete=models.CASCADE)
-    selected_choice = models.ForeignKey(Choice, on_delete=models.CASCADE)
+    selected_choice = models.ForeignKey(Choice, on_delete=models.CASCADE, null=True, blank=True)
+    selected_choices = models.ManyToManyField(Choice, related_name='selected_in_answers', blank=True)
     ai_explanation = models.TextField(blank=True, help_text="AI-generated explanation for this answer")
     
     def __str__(self):
@@ -80,4 +82,18 @@ class Answer(models.Model):
     
     @property
     def is_correct(self):
-        return self.selected_choice.is_correct
+        # Pour les questions à choix unique
+        if not self.question.is_multiple_choice and self.selected_choice:
+            return self.selected_choice.is_correct
+        
+        # Pour les questions à choix multiples
+        elif self.question.is_multiple_choice:
+            # Récupérer tous les choix corrects pour cette question
+            correct_choices = set(self.question.choices.filter(is_correct=True).values_list('id', flat=True))
+            # Récupérer tous les choix sélectionnés par l'utilisateur
+            selected = set(self.selected_choices.values_list('id', flat=True))
+            
+            # La réponse est correcte si l'utilisateur a sélectionné exactement tous les choix corrects
+            return correct_choices == selected
+        
+        return False

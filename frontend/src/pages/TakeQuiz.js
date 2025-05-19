@@ -13,6 +13,7 @@ const TakeQuiz = () => {
   const [attempt, setAttempt] = useState(null);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [answers, setAnswers] = useState({});
+  const [multipleChoiceAnswers, setMultipleChoiceAnswers] = useState({});
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState(null);
@@ -55,11 +56,21 @@ const TakeQuiz = () => {
         
         // Initialize answers from existing attempt answers
         if (attemptResponse.data.answers && attemptResponse.data.answers.length > 0) {
-          const answerMap = {};
+          const singleAnswerMap = {};
+          const multipleAnswerMap = {};
+          
           attemptResponse.data.answers.forEach(answer => {
-            answerMap[answer.question] = answer.selected_choice;
+            if (answer.is_multiple_choice) {
+              // Pour les questions à choix multiples
+              multipleAnswerMap[answer.question] = answer.selected_choices_ids || [];
+            } else {
+              // Pour les questions à choix unique
+              singleAnswerMap[answer.question] = answer.selected_choice;
+            }
           });
-          setAnswers(answerMap);
+          
+          setAnswers(singleAnswerMap);
+          setMultipleChoiceAnswers(multipleAnswerMap);
         }
         
         setError(null);
@@ -102,23 +113,71 @@ const TakeQuiz = () => {
     return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
   };
 
+  // Vérifier si une question est à choix multiples
+  const isMultipleChoiceQuestion = (questionId) => {
+    if (!quiz || !quiz.questions) return false;
+    const question = quiz.questions.find(q => q.id === questionId);
+    return question && question.is_multiple_choice;
+  };
+
+  // Gérer la sélection de réponse pour les questions à choix unique et multiples
   const handleAnswerSelect = async (questionId, choiceId) => {
-    // Update local state
-    setAnswers(prev => ({
-      ...prev,
-      [questionId]: choiceId
-    }));
+    const isMultiple = isMultipleChoiceQuestion(questionId);
     
     try {
-      // Submit answer to backend
-      await axios.post(`/quizzes/attempts/${attempt.id}/submit_answer/`, {
-        question_id: questionId,
-        choice_id: choiceId
-      });
+      if (isMultiple) {
+        // Pour les questions à choix multiples
+        const currentSelections = [...(multipleChoiceAnswers[questionId] || [])];
+        let newSelections;
+        
+        if (currentSelections.includes(choiceId)) {
+          // Si le choix est déjà sélectionné, le désélectionner
+          newSelections = currentSelections.filter(id => id !== choiceId);
+        } else {
+          // Sinon, l'ajouter à la sélection
+          newSelections = [...currentSelections, choiceId];
+        }
+        
+        // Mettre à jour l'état local
+        setMultipleChoiceAnswers(prev => ({
+          ...prev,
+          [questionId]: newSelections
+        }));
+        
+        // Soumettre la réponse au backend
+        await axios.post(`/quizzes/attempts/${attempt.id}/submit_answer/`, {
+          question_id: questionId,
+          choice_ids: newSelections
+        });
+      } else {
+        // Pour les questions à choix unique
+        // Mettre à jour l'état local
+        setAnswers(prev => ({
+          ...prev,
+          [questionId]: choiceId
+        }));
+        
+        // Soumettre la réponse au backend
+        await axios.post(`/quizzes/attempts/${attempt.id}/submit_answer/`, {
+          question_id: questionId,
+          choice_id: choiceId
+        });
+      }
     } catch (err) {
       console.error('Error submitting answer:', err);
-      // We don't show an error to the user here to avoid disrupting the quiz flow
-      // The answer will still be saved locally and submitted with the final submission
+      // Nous n'affichons pas d'erreur à l'utilisateur ici pour ne pas perturber le déroulement du quiz
+      // La réponse sera toujours enregistrée localement et soumise avec la soumission finale
+    }
+  };
+  
+  // Vérifier si un choix est sélectionné
+  const isChoiceSelected = (questionId, choiceId) => {
+    const isMultiple = isMultipleChoiceQuestion(questionId);
+    
+    if (isMultiple) {
+      return multipleChoiceAnswers[questionId] && multipleChoiceAnswers[questionId].includes(choiceId);
+    } else {
+      return answers[questionId] === choiceId;
     }
   };
 
@@ -203,7 +262,14 @@ const TakeQuiz = () => {
                 {/* Question content */}
                 {currentQuestion && (
                   <div className="p-6">
-                    <h2 className="text-xl font-semibold mb-6">{currentQuestion.text}</h2>
+                    <h2 className="text-xl font-semibold mb-6">
+                      {currentQuestion.text}
+                      {currentQuestion.is_multiple_choice && (
+                        <span className="text-sm font-normal text-gray-600 block mt-1">
+                          (Sélectionnez toutes les réponses correctes)
+                        </span>
+                      )}
+                    </h2>
                     
                     {/* Answer choices */}
                     <div className="space-y-3 mb-8">
@@ -211,22 +277,38 @@ const TakeQuiz = () => {
                         <div 
                           key={choice.id}
                           className={`border rounded-lg p-4 cursor-pointer transition-colors ${
-                            answers[currentQuestion.id] === choice.id
+                            isChoiceSelected(currentQuestion.id, choice.id)
                               ? 'border-primary-500 bg-primary-50'
                               : 'border-gray-300 hover:border-primary-300'
                           }`}
                           onClick={() => handleAnswerSelect(currentQuestion.id, choice.id)}
                         >
                           <div className="flex items-center">
-                            <div className={`w-5 h-5 rounded-full border flex items-center justify-center mr-3 ${
-                              answers[currentQuestion.id] === choice.id
-                                ? 'border-primary-500 bg-primary-500'
-                                : 'border-gray-400'
-                            }`}>
-                              {answers[currentQuestion.id] === choice.id && (
-                                <div className="w-2 h-2 rounded-full bg-white"></div>
-                              )}
-                            </div>
+                            {currentQuestion.is_multiple_choice ? (
+                              // Checkbox pour les questions à choix multiples
+                              <div className={`w-5 h-5 border flex items-center justify-center mr-3 ${
+                                isChoiceSelected(currentQuestion.id, choice.id)
+                                  ? 'border-primary-500 bg-primary-500'
+                                  : 'border-gray-400'
+                              }`}>
+                                {isChoiceSelected(currentQuestion.id, choice.id) && (
+                                  <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
+                                    <path d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" />
+                                  </svg>
+                                )}
+                              </div>
+                            ) : (
+                              // Radio button pour les questions à choix unique
+                              <div className={`w-5 h-5 rounded-full border flex items-center justify-center mr-3 ${
+                                isChoiceSelected(currentQuestion.id, choice.id)
+                                  ? 'border-primary-500 bg-primary-500'
+                                  : 'border-gray-400'
+                              }`}>
+                                {isChoiceSelected(currentQuestion.id, choice.id) && (
+                                  <div className="w-2 h-2 rounded-full bg-white"></div>
+                                )}
+                              </div>
+                            )}
                             <span>{choice.text}</span>
                           </div>
                         </div>

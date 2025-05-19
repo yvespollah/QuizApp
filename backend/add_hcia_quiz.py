@@ -246,70 +246,43 @@ true_false_questions = [
     }
 ]
 
-# Ajout des questions au quiz
-for question_data in single_choice_questions:
-    # Création de la question à choix unique
-    question = Question.objects.create(
-        quiz=quiz,
-        text=question_data['text'],
-        explanation='',
-        is_multiple_choice=False
-    )
-    
-    print(f"Question ajoutée: {question.text}")
-    
-    # Ajout des choix
-    for choice_data in question_data['choices']:
-        Choice.objects.create(
-            question=question,
-            text=choice_data['text'],
-            is_correct=choice_data['is_correct']
-        )
-        
-        print(f"  - Choix ajouté: {choice_data['text']} (Correct: {choice_data['is_correct']})")
+# Création des listes pour chaque type de question
+all_questions = []
 
-# Ajout des questions à choix multiples
-for question_data in multiple_choice_questions:
-    # Création de la question à choix multiples
-    question = Question.objects.create(
-        quiz=quiz,
-        text=question_data['text'],
-        explanation='',
-        is_multiple_choice=True
-    )
-    
-    print(f"Question ajoutée: {question.text}")
-    
-    # Ajout des choix
-    for choice_data in question_data['choices']:
-        Choice.objects.create(
-            question=question,
-            text=choice_data['text'],
-            is_correct=choice_data['is_correct']
-        )
-        
-        print(f"  - Choix ajouté: {choice_data['text']} (Correct: {choice_data['is_correct']})")
+# Ajouter les questions à choix unique avec le flag is_multiple_choice=False
+for q in single_choice_questions:
+    q["is_multiple_choice"] = False
+    all_questions.append(q)
 
-# Ajout des questions vrai/faux
-for question_data in true_false_questions:
-    # Création de la question vrai/faux
+# Ajouter les questions à choix multiples avec le flag is_multiple_choice=True
+for q in multiple_choice_questions:
+    q["is_multiple_choice"] = True
+    all_questions.append(q)
+
+# Ajouter les questions vrai/faux avec le flag is_multiple_choice=False
+for q in true_false_questions:
+    q["is_multiple_choice"] = False
+    all_questions.append(q)
+
+# Créer les questions et les choix
+for i, q_data in enumerate(all_questions, 1):
     question = Question.objects.create(
         quiz=quiz,
-        text=question_data['text'],
-        explanation='',
-        is_multiple_choice=False
+        text=q_data["text"],
+        explanation="",  # Pas d'explication
+        order=i,
+        is_multiple_choice=q_data["is_multiple_choice"]
     )
     
-    print(f"Question ajoutée: {question.text}")
-    
     # Ajout des choix
-    for choice_data in question_data['choices']:
+    for choice_data in q_data["choices"]:
         Choice.objects.create(
             question=question,
-            text=choice_data['text'],
-            is_correct=choice_data['is_correct']
+            text=choice_data["text"],
+            is_correct=choice_data["is_correct"]
         )
-        
-        print(f"  - Choix ajouté: {choice_data['text']} (Correct: {choice_data['is_correct']})")
+    
+    question_type = "choix multiples" if q_data["is_multiple_choice"] else "choix unique"
+    print(f"Question {i} ajoutée ({question_type}) avec {len(q_data['choices'])} choix")
 
 print(f"\nQuiz HCIA Datacom créé avec succès avec {len(single_choice_questions)} questions à choix unique, {len(multiple_choice_questions)} questions à choix multiples, et {len(true_false_questions)} questions vrai/faux.")
