@@ -19,7 +19,7 @@ class QuestionSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = Question
-        fields = ['id', 'text', 'explanation', 'order', 'choices']
+        fields = ['id', 'text', 'explanation', 'order', 'choices', 'is_multiple_choice']
 
 
 class QuizListSerializer(serializers.ModelSerializer):

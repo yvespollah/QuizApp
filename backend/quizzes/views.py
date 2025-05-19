@@ -176,11 +176,29 @@ class QuizAttemptViewSet(viewsets.ModelViewSet):
         
         # Calculate the score
         total_questions = attempt.quiz.questions.count()
+        correct_answers = 0
+        
         if total_questions > 0:
-            correct_answers = Answer.objects.filter(
-                attempt=attempt,
-                selected_choice__is_correct=True
-            ).count()
+            # Récupérer toutes les réponses de cette tentative
+            answers = Answer.objects.filter(attempt=attempt)
+            
+            for answer in answers:
+                if answer.question.is_multiple_choice:
+                    # Pour les questions à choix multiples
+                    selected_choices = answer.selected_choices.all()
+                    correct_choices = answer.question.choices.filter(is_correct=True)
+                    
+                    # Vérifier si toutes les réponses correctes ont été sélectionnées et aucune incorrecte
+                    selected_ids = set(choice.id for choice in selected_choices)
+                    correct_ids = set(choice.id for choice in correct_choices)
+                    
+                    if selected_ids == correct_ids:
+                        correct_answers += 1
+                else:
+                    # Pour les questions à choix unique
+                    if answer.selected_choice and answer.selected_choice.is_correct:
+                        correct_answers += 1
+            
             attempt.score = (correct_answers / total_questions) * 100
         else:
             attempt.score = 0
@@ -191,10 +209,25 @@ class QuizAttemptViewSet(viewsets.ModelViewSet):
         answers = Answer.objects.filter(attempt=attempt)
         for answer in answers:
             question_text = answer.question.text
-            correct_choice = answer.question.choices.filter(is_correct=True).first()
-            correct_answer_text = correct_choice.text if correct_choice else "Unknown"
-            user_answer_text = answer.selected_choice.text
-            is_correct = answer.is_correct
+            
+            if answer.question.is_multiple_choice:
+                # Pour les questions à choix multiples
+                correct_choices = answer.question.choices.filter(is_correct=True)
+                correct_answer_text = ", ".join([choice.text for choice in correct_choices])
+                
+                selected_choices = answer.selected_choices.all()
+                user_answer_text = ", ".join([choice.text for choice in selected_choices])
+                
+                # Vérifier si la réponse est correcte
+                selected_ids = set(choice.id for choice in selected_choices)
+                correct_ids = set(choice.id for choice in correct_choices)
+                is_correct = selected_ids == correct_ids
+            else:
+                # Pour les questions à choix unique
+                correct_choice = answer.question.choices.filter(is_correct=True).first()
+                correct_answer_text = correct_choice.text if correct_choice else "Unknown"
+                user_answer_text = answer.selected_choice.text if answer.selected_choice else "No answer"
+                is_correct = answer.selected_choice and answer.selected_choice.is_correct
             
             # Generate AI explanation
             explanation = explanation_service.generate_explanation(

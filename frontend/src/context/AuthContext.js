@@ -64,7 +64,15 @@ export const AuthProvider = ({ children }) => {
   // Login user
   const login = async (userData) => {
     try {
-      const res = await axios.post('/token/', userData);
+      // Envoyer l'email comme username pour JWT
+      const authData = {
+        username: userData.email, // Le backend cherchera par email ou username
+        password: userData.password
+      };
+      
+      console.log('Sending auth data:', authData);
+      
+      const res = await axios.post('/token/', authData);
       
       // Save token to local storage
       localStorage.setItem('token', res.data.access);
@@ -80,6 +88,7 @@ export const AuthProvider = ({ children }) => {
       
       return res.data;
     } catch (err) {
+      console.error('Login error details:', err.response?.data);
       setError(err.response?.data?.detail || 'Login failed');
       throw err;
     }
